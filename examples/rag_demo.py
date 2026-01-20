@@ -89,7 +89,7 @@ async def process_with_rag(file_path, output_dir, api_key, base_url=None, workin
 
         logger.info("\nQuerying processed document:")
         # 换一个更具体的问题，容易命中关键词
-        text_queries = ["Who is Chen Yue?"]
+        text_queries = ["What is the main content of this document?","What is Fourier Transform?"]
 
         for query in text_queries:
             logger.info(f"\n[Text Query]: {query}")

@@ -1,6 +1,6 @@
 import os
 import sys
-
+# 用于检测是否有效
 # 尝试加载 .env 文件
 try:
     from dotenv import load_dotenv
