@@ -1,0 +1,387 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fontawesome5}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+% 页面设置
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+
+% 颜色定义
+\definecolor{primaryblue}{RGB}{41, 128, 185}
+\definecolor{secondarygreen}{RGB}{39, 174, 96}
+\definecolor{warningorange}{RGB}{230, 126, 34}
+\definecolor{codebg}{RGB}{245, 245, 245}
+\definecolor{codeframe}{RGB}{200, 200, 200}
+
+% 代码样式
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    framerule=0.5pt,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    breakatwhitespace=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+    numbers=none,
+    xleftmargin=10pt,
+    xrightmargin=10pt,
+    aboveskip=10pt,
+    belowskip=10pt
+}
+
+% 标题样式
+\titleformat{\section}{\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{primaryblue!80}}{\thesubsection}{1em}{}
+
+% 页眉页脚
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{gray}{新工科 AI 助教系统}}
+\fancyhead[R]{\textcolor{gray}{项目技术总结}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% tcolorbox 样式
+\tcbuselibrary{skins,breakable}
+
+\newtcolorbox{highlightbox}[1][]{
+    colback=primaryblue!5,
+    colframe=primaryblue,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable
+}
+
+\newtcolorbox{tipbox}[1][]{
+    colback=secondarygreen!5,
+    colframe=secondarygreen,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable
+}
+
+\newtcolorbox{warningbox}[1][]{
+    colback=warningorange!5,
+    colframe=warningorange,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable
+}
+
+\begin{document}
+
+% 封面
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries\color{primaryblue} 🎓 新工科 AI 助教系统}
+    
+    \vspace{0.5cm}
+    {\Large\color{gray} 项目技术总结报告}
+    
+    \vspace{2cm}
+    
+    \begin{tcolorbox}[
+        colback=white,
+        colframe=primaryblue,
+        width=0.8\textwidth,
+        arc=5mm
+    ]
+        \centering
+        \large
+        基于 \textbf{RAG-Anything} 框架构建的\\[0.5em]
+        多模态智能问答系统
+    \end{tcolorbox}
+    
+    \vspace{2cm}
+    
+    \begin{tabular}{rl}
+        \textbf{文本模型:} & DeepSeek (deepseek-chat) \\[0.5em]
+        \textbf{视觉模型:} & 阿里通义 Qwen-VL-Max \\[0.5em]
+        \textbf{嵌入模型:} & BGE-Small-ZH (本地) \\[0.5em]
+        \textbf{RAG框架:} & LightRAG + 知识图谱 \\
+    \end{tabular}
+    
+    \vfill
+    
+    {\large \today}
+    
+\end{titlepage}
+
+% 目录
+\tableofcontents
+\newpage
+
+% ========== 正文 ==========
+
+\section{项目概述}
+
+本项目基于 \textbf{RAG-Anything} 框架构建了一个多模态 AI 助教系统，能够：
+
+\begin{itemize}[leftmargin=2em]
+    \item 解析 PDF 教材中的\textbf{文本、图片、表格和公式}
+    \item 构建\textbf{知识图谱}进行语义检索
+    \item 提供\textbf{个性化智能问答}功能
+    \item 支持\textbf{多图片批量处理}
+\end{itemize}
+
+\begin{highlightbox}[核心特性]
+\begin{itemize}
+    \item \textbf{双模型协作}：文本处理使用 DeepSeek，图像理解使用 Qwen-VL
+    \item \textbf{智能分批}：自动将大量图片分批处理，突破 API 限制
+    \item \textbf{优雅降级}：VLM 调用失败时自动回退到纯文本模式
+\end{itemize}
+\end{highlightbox}
+
+\section{大模型架构}
+
+\subsection{双模型协作设计}
+
+系统采用\textbf{文本模型 + 视觉模型}的双模型协作架构：
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.5cm,
+    box/.style={rectangle, draw=primaryblue, fill=primaryblue!10, 
+                text width=3cm, text centered, rounded corners, minimum height=1cm},
+    arrow/.style={->, thick, primaryblue}
+]
+    % 节点
+    \node[box] (query) {用户查询};
+    \node[box, below of=query] (rag) {RAG 检索\\(LightRAG)};
+    \node[box, below left=1.5cm and 0.5cm of rag] (text) {文本处理\\DeepSeek};
+    \node[box, below right=1.5cm and 0.5cm of rag] (vision) {图像处理\\Qwen-VL};
+    \node[box, below=3.5cm of rag] (output) {综合回答生成};
+    
+    % 箭头
+    \draw[arrow] (query) -- (rag);
+    \draw[arrow] (rag) -- (text);
+    \draw[arrow] (rag) -- (vision);
+    \draw[arrow] (text) -- (output);
+    \draw[arrow] (vision) -- (output);
+\end{tikzpicture}
+\end{center}
+
+\subsection{模型选型}
+
+\begin{table}[htbp]
+\centering
+\caption{模型配置详情}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{功能} & \textbf{模型} & \textbf{提供商} & \textbf{特点} \\
+\midrule
+文本理解/生成 & deepseek-chat & DeepSeek & 中文能力强、性价比高 \\
+图像理解 & qwen-vl-max & 阿里云 & 支持多图(10张)、中文OCR强 \\
+文本嵌入 & bge-small-zh-v1.5 & 本地 & 512维向量、离线可用 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{技术亮点}
+
+\subsection{亮点一：智能图片分批处理}
+
+当 PDF 中的图片数量超过 VLM 单次请求限制时，系统自动进行分批处理：
+
+\begin{lstlisting}[language=Python, caption=分批处理流程]
+# 当图片超过单次限制时自动分批
+# 检测到 25 张图片，每批最多 10 张
+# 将 25 张图片分成 3 批处理
+# 正在处理第 1/3 批...
+# 正在处理第 2/3 批...
+# 正在处理第 3/3 批...
+# 正在用 DeepSeek 综合所有批次的分析结果...
+\end{lstlisting}
+
+\begin{tipbox}[解决的问题]
+突破 VLM API 的单次图片数量限制，支持任意数量图片的完整处理。每个批次的分析结果最终由 DeepSeek 综合成完整答案。
+\end{tipbox}
+
+\subsection{亮点二：DeepSeek 兼容性适配}
+
+LightRAG 框架默认使用 OpenAI 的 \texttt{response\_format} 结构化输出功能，但 DeepSeek 不支持此功能。
+
+\begin{lstlisting}[language=Python, caption=兼容性处理]
+# 自动移除 DeepSeek 不支持的参数
+kwargs.pop('response_format', None)
+kwargs.pop('keyword_extraction', None)
+\end{lstlisting}
+
+\textbf{修改位置：}
+\begin{itemize}
+    \item \texttt{app.py} 中的 \texttt{safe\_deepseek\_call} 和 \texttt{vision\_func}
+    \item \texttt{lightrag/llm/openai.py} 中的 DeepSeek 检测逻辑
+\end{itemize}
+
+\subsection{亮点三：优雅的错误回退机制}
+
+\begin{lstlisting}[language=Python, caption=错误回退逻辑]
+try:
+    # 尝试调用 VLM
+    response = await openai_complete_if_cache(vision_model, ...)
+except Exception as e:
+    # 失败时自动回退到纯文本模式
+    print(f"VLM 调用失败: {e}，回退到纯文本模式")
+    return await safe_deepseek_call(text_prompt, ...)
+\end{lstlisting}
+
+\begin{warningbox}[解决的问题]
+VLM 调用失败时不会中断用户体验，自动降级到纯文本问答，确保系统稳定性。
+\end{warningbox}
+
+\subsection{亮点四：动态模型配置}
+
+根据配置的视觉模型提供商自动调整图片数量限制：
+
+\begin{lstlisting}[language=Python, caption=动态配置逻辑]
+if vision_provider == "qwen":
+    MAX_IMAGES_PER_REQUEST = 10   # 阿里 Qwen-VL
+elif vision_provider == "siliconflow":
+    MAX_IMAGES_PER_REQUEST = 10   # 硅基流动
+else:
+    MAX_IMAGES_PER_REQUEST = 1    # 智谱 GLM-4V
+\end{lstlisting}
+
+\subsection{亮点五：个性化教学模式}
+
+系统根据用户选择的学习水平调整回答风格：
+
+\begin{table}[htbp]
+\centering
+\caption{教学模式对比}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{模式} & \textbf{目标用户} & \textbf{回答风格} \\
+\midrule
+直觉科普模式 & 初学者 & 用生活类比解释概念 \\
+标准教学模式 & 本科生 & 定义→公式→物理意义→考点 \\
+深度研讨模式 & 专家 & 学术简练、深入机制 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{项目配置}
+
+\subsection{环境变量配置 (.env)}
+
+\begin{lstlisting}[caption=.env 配置文件]
+# 文本模型 (DeepSeek)
+LLM_BINDING_HOST=https://api.deepseek.com/v1
+LLM_BINDING_API_KEY=sk-xxx
+OPENAI_API_KEY=sk-xxx
+
+# 视觉模型 (阿里 Qwen-VL)
+VISION_PROVIDER=qwen
+QWEN_API_KEY=sk-xxx
+\end{lstlisting}
+
+\subsection{支持的视觉模型}
+
+\begin{table}[htbp]
+\centering
+\caption{可选视觉模型}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\textbf{提供商} & \textbf{模型} & \textbf{多图支持} & \textbf{配置} \\
+\midrule
+智谱 & glm-4v & 1张 & \texttt{VISION\_PROVIDER=zhipu} \\
+\textbf{阿里} & qwen-vl-max & \textbf{10张} & \texttt{VISION\_PROVIDER=qwen} \\
+硅基流动 & Qwen2-VL-72B & 10张 & \texttt{VISION\_PROVIDER=siliconflow} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{关键修改文件}
+
+\begin{table}[htbp]
+\centering
+\caption{修改文件清单}
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+\textbf{文件} & \textbf{修改内容} \\
+\midrule
+\texttt{app.py} & 双模型架构、图片分批处理、错误回退机制、动态配置 \\
+\texttt{lightrag/llm/openai.py} & DeepSeek \texttt{response\_format} 兼容性修复 \\
+\texttt{.env} & API 密钥和模型配置 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{运行指南}
+
+\subsection{启动命令}
+
+\begin{lstlisting}[language=bash]
+cd C:\RAG-Anything\RAG-Anything
+.\venv\Scripts\activate
+streamlit run app.py
+\end{lstlisting}
+
+\subsection{访问地址}
+
+\begin{itemize}
+    \item 本地访问: \url{http://localhost:8501}
+    \item 局域网访问: \url{http://你的IP:8501}
+\end{itemize}
+
+\section{系统架构图}
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=0.8cm,
+    layer/.style={rectangle, draw=primaryblue, fill=primaryblue!10, 
+                  text width=12cm, text centered, rounded corners, minimum height=1.2cm},
+    component/.style={rectangle, draw=gray, fill=gray!10, 
+                      text width=3.5cm, text centered, rounded corners, minimum height=0.8cm}
+]
+    % 层级
+    \node[layer] (ui) {\textbf{Streamlit Web UI}\\PDF上传 | 问答输入 | 学习模式选择};
+    
+    \node[layer, below=0.5cm of ui] (rag) {\textbf{RAGAnything 框架}\\MinerU 解析 | LightRAG 知识图谱 | 多模态处理器};
+    
+    \node[component, below left=0.8cm and 1cm of rag] (deepseek) {\textbf{DeepSeek}\\文本处理\\实体提取\\答案生成};
+    
+    \node[component, below right=0.8cm and 1cm of rag] (qwen) {\textbf{Qwen-VL-Max}\\图像处理\\分批处理\\内容理解};
+    
+    % 连接
+    \draw[->, thick, primaryblue] (ui) -- (rag);
+    \draw[->, thick, primaryblue] (rag) -- (deepseek);
+    \draw[->, thick, primaryblue] (rag) -- (qwen);
+\end{tikzpicture}
+\end{center}
+
+\section{总结}
+
+本项目成功实现了一个功能完整的多模态 AI 助教系统，主要技术贡献包括：
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{双模型协作架构}：DeepSeek 负责文本，Qwen-VL 负责图像
+    \item \textbf{智能分批处理}：突破 VLM 图片数量限制
+    \item \textbf{完善的错误处理}：优雅降级确保系统稳定
+    \item \textbf{灵活的配置机制}：支持多种 VLM 提供商切换
+    \item \textbf{个性化教学}：根据用户水平调整回答风格
+\end{enumerate}
+
+\vspace{1cm}
+\begin{center}
+\textcolor{primaryblue}{\Large 🎉 项目成功运行！}
+\end{center}
+
+\end{document}
