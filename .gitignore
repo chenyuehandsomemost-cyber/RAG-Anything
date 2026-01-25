@@ -78,3 +78,10 @@ memory-bank/
 .claude/
 .cursor/
 CLAUDE.md
+
+# Streamlit secrets (never commit real API keys!)
+.streamlit/secrets.toml
+
+# Student profile database
+data/
+*.db
